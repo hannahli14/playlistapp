@@ -21,6 +21,13 @@ class ProfileCell: UITableViewCell {
     @IBOutlet weak var songView: UIView!
     @IBOutlet weak var heartButton: UIButton!
     @IBAction func heartPressed(_ sender: Any) {
+        if(heartButton.currentImage?.isEqual(UIImage(named: "heart")))! {
+            let image = UIImage(named: "heart filled")
+            heartButton.setImage(image, for: .normal)
+        } else if(heartButton.currentImage?.isEqual(UIImage(named: "heart filled")))! {
+            let image = UIImage(named: "heart")
+            heartButton.setImage(image, for: .normal)
+        }
     }
     @IBOutlet weak var chatButton: UIButton!
     @IBAction func chatPressed(_ sender: Any) {
@@ -117,15 +124,16 @@ class ProfileViewController: UIViewController, UITableViewDelegate, UITableViewD
     
     func loadPosts() {
         ref.child("posts").queryOrdered(byChild: "user").queryEqual(toValue: userID).observe(.childAdded) { (snapshot) in
-            print(snapshot)
+            //print(snapshot)
             if let dict = snapshot.value as? [String: Any] {
                 let captionText = dict["caption"] as! String
                 let userID = dict["user"] as! String
                 let timestamp = dict["time"] as! Double
+                let username = dict["username"] as! String
                 let converted = NSDate(timeIntervalSince1970: timestamp / 1000) as Date
                 let newTime = converted.timeAgoDisplay()
-                print("NEW TIME \(newTime)")
-                let post = Post(captionText: captionText, userText: userID, timeText: newTime)
+                //print("NEW TIME \(newTime)")
+                let post = Post(captionText: captionText, userText: userID, timeText: newTime, userLabel: username)
                 self.posts.insert(post, at: 0)
                 self.feedTV.reloadData()
             }
@@ -175,12 +183,12 @@ class ProfileViewController: UIViewController, UITableViewDelegate, UITableViewD
                 }
             }).resume()
         }
+        cell.userLabel.text = posts[indexPath.row].username
         cell.userImage.layer.cornerRadius = cell.userImage.frame.size.width/2
         cell.userImage.clipsToBounds = true
         cell.userImage.layer.borderColor = (UIColor.gray).cgColor
         cell.userImage.layer.borderWidth = 0.5
         cell.caption.text = posts[indexPath.row].caption
-        cell.userLabel.text = posts[indexPath.row].user
         cell.timeLabel.text = posts[indexPath.row].timeStamp
         cell.songView.layer.cornerRadius = 12
         cell.songView.layer.borderColor = UIColor(red: 255/255, green: 147/255, blue: 0/255, alpha: 1).cgColor

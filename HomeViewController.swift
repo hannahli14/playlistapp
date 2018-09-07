@@ -42,11 +42,14 @@ class Post {
     var caption:String!
     var user:String!
     var timeStamp:String!
+    var image:UIImage!
+    var username:String
     let formatter = DateFormatter()
-    init(captionText:String, userText:String, timeText:String){
+    init(captionText:String, userText:String, timeText:String, userLabel:String){
         caption = captionText
         user = userText
         timeStamp = timeText
+        username = userLabel
     }
 }
 
@@ -57,8 +60,9 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
     @IBOutlet weak var feedTV: UITableView!
     @IBOutlet weak var hideFeedView: UIView!
     var refresher: UIRefreshControl!
-    var activityIndicator:UIActivityIndicatorView!
+    let activityView = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
     var userIDArray = [String]()
+    var imageForPost:UIImage!
     var posts = [Post]()
     var currentUser = Auth.auth().currentUser?.uid
     let databaseRef = Database.database().reference()
@@ -71,6 +75,10 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
         refresher = UIRefreshControl()
         refresher.attributedTitle = NSAttributedString()
         refresher.addTarget(self, action: #selector(HomeViewController.reloadPage), for: UIControlEvents.valueChanged)
+        activityView.center = self.view.center
+        activityView.color = UIColor.darkGray
+        activityView.startAnimating()
+        self.view.addSubview(activityView)
         feedTV.addSubview(refresher)
         feedTV.dataSource = self
         feedTV.delegate = self
@@ -91,6 +99,7 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
             }
             perform(#selector(loadPosts), with: nil, afterDelay: 1)
         }
+        activityView.stopAnimating()
     }
 
     /*func updateState(user: String){
@@ -114,15 +123,15 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
                 let captionText = dict["caption"] as! String
                 let userID = dict["user"] as! String
                 let timestamp = dict["time"] as! Double
+                let username = dict["username"] as! String
                 let converted = NSDate(timeIntervalSince1970: timestamp / 1000) as Date
                 let newTime = converted.timeAgoDisplay()
                 print("NEW TIME \(newTime)")
                 //print("Array \(self.userIDArray)")
                 print(userID)
                 if ((self.userIDArray.contains(userID) || userID == self.currentUser!)) {
-                    let post = Post(captionText: captionText, userText: userID, timeText: newTime)
+                    let post = Post(captionText: captionText, userText: userID, timeText: newTime, userLabel: username)
                     self.posts.insert(post, at: 0)
-                    //print(self.posts)
                 }
                 self.feedTV.reloadData()
             }
@@ -149,15 +158,9 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "post") as! postCell
-        let id = posts[indexPath.row].user
-        databaseRef.child("users").child(id!).observe(.value) { (snapshot) in
-            let value = snapshot.value as? NSDictionary
-            let username = value?["Username"] as? String ?? ""
-            cell.userLabel.text = username
-        }
         //getting profile picture from Firebase Storage for user
         let reference = Storage.storage().reference(forURL: "gs://data-practice-b6f99.appspot.com")
-        let imageName: String = "profileImage\(id!).jpg"
+        let imageName: String = "profileImage\((posts[indexPath.row].user)!).jpg"
         let imageURL = reference.child(imageName)
         var tempImage: UIImage!
         imageURL.downloadURL { (url, error) in
@@ -177,6 +180,7 @@ class HomeViewController: UIViewController, UITableViewDelegate, UITableViewData
                 }
             }).resume()
         }
+        cell.userLabel.text = posts[indexPath.row].username
         cell.userImage.layer.cornerRadius = cell.userImage.frame.size.width/2
         cell.userImage.clipsToBounds = true
         cell.userImage.layer.borderColor = (UIColor.gray).cgColor
@@ -266,7 +270,4 @@ extension Date {
             return newTime
         }
     }
-}
-
-extension UIImage {
 }
